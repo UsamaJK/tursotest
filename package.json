@@ -1,0 +1,19 @@
+{
+  "name": "tursotest",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && prisma generate",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.8.1",
+    "@prisma/adapter-libsql": "^5.18.0",
+    "@prisma/client": "^5.18.0",
+    "next": "15.5.4",
+    "prisma": "^5.18.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}
