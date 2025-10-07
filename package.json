@@ -11,9 +11,13 @@
     "@libsql/client": "^0.8.1",
     "@prisma/adapter-libsql": "^5.18.0",
     "@prisma/client": "^5.18.0",
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.545.0",
     "next": "15.5.4",
     "prisma": "^5.18.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "zod": "^4.1.12"
   }
 }
