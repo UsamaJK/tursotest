@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --btn-cursor: pointer;
+}
+
+/* Map Tailwind design tokens to your CSS vars */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* 👇 Use Lato as the default sans via the CSS variable from next/font */
+  --font-sans: var(--font-lato);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* dark-mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --btn-cursor: pointer;
+  }
+}
+
+@layer base {
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"] {
+    cursor: var(--btn-cursor, pointer);
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Optional: set body defaults with fallbacks */
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-lato), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  }
+}
