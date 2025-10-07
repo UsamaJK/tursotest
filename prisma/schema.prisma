@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
 
 generator client {
   provider        = "prisma-client-js"
@@ -15,7 +11,101 @@ datasource db {
 }
 
 model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  passwordHash         String
+  // was: role Role
+  role                 String                @default("CANDIDATE") // 'ADMIN' | 'CANDIDATE'
+  fullName             String
+  phone                String?
+  country              String?
+  city                 String?
+  createdAt            DateTime              @default(now())
+  attempts             Attempt[]
+  // was: kycStatus KycStatus?
+  kycStatus            String?               @default("PENDING") // 'PENDING' | 'APPROVED' | 'REJECTED'
+  identityVerification IdentityVerification?
+}
+
+model Question {
+  id            String        @id @default(cuid())
+  text          String
+  // was: tag Level
+  tag           String // 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'
+  allowMultiple Boolean       @default(false)
+  options       Option[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  attemptItems  AttemptItem[]
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
+  order      Int      @default(0)
+}
+
+model TestSettings {
+  id             Int      @id @default(1)
+  durationMin    Int      @default(30)
+  // was: Json with dbgenerated default
+  criteria       String   @default("{}") // JSON string
+  resultCriteria String   @default("{}") // JSON string
+  updatedAt      DateTime @updatedAt
+}
+
+model Attempt {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt     DateTime      @default(now())
+  finishedAt    DateTime?
+  // was: status AttemptStatus
+  status        String        @default("IN_PROGRESS") // 'IN_PROGRESS' | 'SUBMITTED'
+  items         AttemptItem[]
+  // was: level Level?
+  level         String? // 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'
+  certificateId String?
+  issuedAt      DateTime?
+  verifySlug    String?       @unique
+  region        String?
+}
+
+model AttemptItem {
+  id        String  @id @default(cuid())
+  attemptId String
+  attempt   Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+
+  allowMultiple Boolean @default(false)
+
+  // JSON arrays stored as strings
+  optionIds         String // JSON string of string[] (Option.id[])
+  selectedOptionIds String @default("[]") // JSON string of string[]
+  correctOptionIds  String // JSON string of string[]
+
+  order Int @default(0)
+
+  // After submission we mark item correctness:
+  isCorrect Boolean?
+}
+
+model IdentityVerification {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selfieUrl  String
+  idDocUrl   String
+  // was: status KycStatus
+  status     String    @default("PENDING") // 'PENDING' | 'APPROVED' | 'REJECTED'
+  consentAt  DateTime
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+  notes      String?
 }
