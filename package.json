@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && prisma generate",
-    "postinstall": "prisma generate && playwright install --with-deps chromium",
+    "build": "next build",
+    "postinstall": "prisma generate",
     "seed": "node prisma/seed.mjs",
     "start": "next start"
   },
@@ -15,12 +15,14 @@
     "@libsql/client": "^0.8.1",
     "@prisma/adapter-libsql": "^5.18.0",
     "@prisma/client": "^5.18.0",
+    "@sparticuz/chromium": "^127.0.0",
     "@vercel/blob": "^2.0.0",
     "bcrypt": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.545.0",
     "next": "15.5.4",
     "prisma": "^5.18.0",
+    "puppeteer-core": "^22.15.0",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -33,10 +35,10 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/react": "^19.2.2",
     "autoprefixer": "^10.4.21",
-    "playwright": "^1.56.0",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
+    "puppeteer": "^24.23.0",
     "tailwindcss": "^4.1.14"
   }
 }

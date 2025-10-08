@@ -1,3 +1,4 @@
+// src/app/api/candidate/attempts/[id]/certificate.pdf/route.js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -6,43 +7,141 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { chromium } from "playwright";
 import QRCode from "qrcode";
 import React from "react";
 import Certificate from "@/cert/Certificate";
 import fs from "fs";
 import path from "path";
 
-// Always await cookies() in Next 15+
+import chromium from "@sparticuz/chromium";
+import puppeteerCore from "puppeteer-core";
+
+// ---------- session ----------
 async function sessionFromCookies() {
-  const store = await cookies();
-  const t = store.get("access_token")?.value;
+  const jar = await cookies();
+  const t = jar.get("access_token")?.value;
   if (!t) return null;
   try {
-    return jwt.verify(t, process.env.JWT_ACCESS_SECRET || "devsecret_change_me");
+    return jwt.verify(
+      t,
+      process.env.ACCESS_TOKEN_SECRET ||
+        process.env.JWT_ACCESS_SECRET ||
+        "devsecret_change_me"
+    );
   } catch {
     return null;
   }
 }
 
-// Convert logo to base64 data URL
-function getLogoDataUrl() {
+// ---------- logo helpers ----------
+function fileToDataUrl(absPath, mime = "image/png") {
+  const buf = fs.readFileSync(absPath);
+  return `data:${mime};base64,${buf.toString("base64")}`;
+}
+function inlinePlaceholder() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="120">
+    <rect width="100%" height="100%" fill="#0ea5e9"/>
+    <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle"
+      font-family="system-ui, -apple-system, Segoe UI" font-size="28" fill="white">
+      English Proficiency
+    </text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function resolveLogoDataUrl() {
   try {
-    const logoPath = path.join(process.cwd(), "public", "cert", "logo.png");
-    const logoBuffer = fs.readFileSync(logoPath);
-    const base64Logo = logoBuffer.toString("base64");
-    return `data:image/png;base64,${base64Logo}`;
-  } catch (error) {
-    console.error("Error reading logo:", error);
-    return null;
+    const fromPublic = path.join(process.cwd(), "public", "cert", "logo.png");
+    if (fs.existsSync(fromPublic)) return fileToDataUrl(fromPublic, "image/png");
+    const fileEnv = process.env.CERT_LOGO_FILE;
+    if (fileEnv) {
+      const abs = path.isAbsolute(fileEnv)
+        ? fileEnv
+        : path.join(process.cwd(), fileEnv);
+      if (fs.existsSync(abs)) {
+        const ext = path.extname(abs).toLowerCase();
+        const mime = ext === ".svg" ? "image/svg+xml" : "image/png";
+        return fileToDataUrl(abs, mime);
+      }
+    }
+    const urlEnv = process.env.CERT_LOGO_URL;
+    if (urlEnv && /^https?:\/\//i.test(urlEnv)) return urlEnv;
+    return inlinePlaceholder();
+  } catch {
+    return inlinePlaceholder();
   }
 }
 
-export async function GET(_req, ctx) {
-  // Dynamic import keeps this server-only
+// ---------- browser launcher (dual-path) ----------
+async function launchBrowser(html) {
+  const isServerless =
+    !!process.env.VERCEL ||
+    !!process.env.AWS_REGION ||
+    process.env.NODE_ENV === "production";
+
+  // Try serverless-friendly path first if on Vercel
+  if (isServerless) {
+    const executablePath = await chromium.executablePath();
+    const browser = await puppeteerCore.launch({
+      args: chromium.args,
+      executablePath,
+      headless: chromium.headless ?? true,
+      defaultViewport: { width: 1200, height: 800, deviceScaleFactor: 2 },
+    });
+    return browser;
+  }
+
+  // ---- Local dev fallbacks ----
+  // 1) If dev installed "puppeteer", prefer its executablePath
+  try {
+    // This import only exists if you installed `puppeteer` (not core)
+    // eslint-disable-next-line import/no-extraneous-dependencies
+    const puppeteer = (await import("puppeteer")).default;
+    const browser = await puppeteer.launch({
+      headless: true,
+      defaultViewport: { width: 1200, height: 800, deviceScaleFactor: 2 },
+    });
+    return browser;
+  } catch {
+    // continue to manual paths
+  }
+
+  // 2) Manual Chrome paths for common OSes
+  const candidates = [];
+  if (process.platform === "darwin") {
+    candidates.push(
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium"
+    );
+  } else if (process.platform === "win32") {
+    candidates.push(
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+    );
+  } else {
+    candidates.push("/usr/bin/google-chrome", "/usr/bin/chromium-browser");
+  }
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      const b = await puppeteerCore.launch({
+        headless: true,
+        executablePath: p,
+        defaultViewport: { width: 1200, height: 800, deviceScaleFactor: 2 },
+      });
+      return b;
+    }
+  }
+
+  throw new Error(
+    "No runnable Chromium/Chrome found. For local dev, install `puppeteer` (devDependency) or set CERT_CHROME_PATH to a Chrome executable."
+  );
+}
+
+// ---------- route ----------
+export async function GET(_req, context) {
   const { renderToStaticMarkup } = await import("react-dom/server");
 
-  const { id } = await ctx.params;
+  const { id } = await context.params;
   const s = await sessionFromCookies();
   if (!s) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -57,10 +156,13 @@ export async function GET(_req, ctx) {
     return NextResponse.json({ error: "Attempt not submitted" }, { status: 409 });
   }
 
-  // Ensure issuance fields once
+  // ensure issuance data
   let { certificateId, issuedAt, verifySlug, region } = attempt;
   if (!certificateId || !issuedAt || !verifySlug) {
-    certificateId = `T-${String(Math.floor(Math.random() * 1_000_0000)).padStart(7, "0")}`;
+    certificateId = `T-${String(Math.floor(Math.random() * 1_000_0000)).padStart(
+      7,
+      "0"
+    )}`;
     verifySlug = crypto.randomUUID();
     issuedAt = new Date();
     await prisma.attempt.update({
@@ -73,17 +175,13 @@ export async function GET(_req, ctx) {
   const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${base}/verify/${verifySlug}`;
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, scale: 6 });
-  
-  // Get logo as data URL for embedding in PDF
-  const logoDataUrl = getLogoDataUrl();
+  const logoUrl = resolveLogoDataUrl();
 
-  // Title-case the full name for display
   const displayName = (attempt.user.fullName || "")
     .trim()
     .split(/\s+/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
-
   const level = attempt.level || "A1";
 
   const html =
@@ -91,7 +189,7 @@ export async function GET(_req, ctx) {
     renderToStaticMarkup(
       <Certificate
         platform="English Proficiency Platform"
-        logoUrl={logoDataUrl}
+        logoUrl={logoUrl}
         user={{ name: displayName }}
         level={level}
         ladder={["A1", "A2", "B1", "B2", "C1", "C2"]}
@@ -114,8 +212,9 @@ export async function GET(_req, ctx) {
       />
     );
 
-  const browser = await chromium.launch(); // add { args: ['--no-sandbox'] } in restricted hosts
-  const page = await browser.newPage({ deviceScaleFactor: 2 });
+  // ▶ Launch headless Chrome in a way that works both on Vercel and locally
+  const browser = await launchBrowser();
+  const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "load" });
   const pdf = await page.pdf({
     format: "A4",
