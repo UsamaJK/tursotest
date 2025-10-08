@@ -210,18 +210,34 @@ export async function GET(_req, context) {
 
   // Improve font rendering / emoji support if needed:
   // await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-GB' });
-
   await page.setContent(html, { 
-    waitUntil: ['load', 'networkidle0'] 
+    waitUntil: ['load', 'networkidle0'],
+    timeout: 30000 // 30 seconds timeout
   });
+
   await page.evaluateHandle('document.fonts.ready');
+
+
+  await page.evaluate(() => {
+    return Promise.all(
+      Array.from(document.images)
+        .filter(img => !img.complete)
+        .map(img => new Promise(resolve => {
+          img.onload = img.onerror = resolve;
+        }))
+    );
+  });
+  await page.waitForTimeout(500);
+
 
 
   const pdf = await page.pdf({
     format: 'A4',
     printBackground: true,
     margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+    preferCSSPageSize: false,
   });
+  
 
   await browser.close();
 
