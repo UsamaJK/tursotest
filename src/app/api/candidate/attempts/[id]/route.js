@@ -1,10 +1,9 @@
 // src/app/api/candidate/attempts/[id]/route.js
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma"
 const SECRET = process.env.JWT_ACCESS_SECRET || "devsecret_change_me";
 
 async function getUser() {
