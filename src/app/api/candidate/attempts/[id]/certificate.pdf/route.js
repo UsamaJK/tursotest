@@ -18,6 +18,14 @@ import Certificate from '@/cert/Certificate';
 import chromium from '@sparticuz/chromium';
 import puppeteerCore from 'puppeteer-core';
 
+
+const chromRoot = path.join(process.cwd(), 'node_modules', '@sparticuz', 'chromium');
+process.env.LD_LIBRARY_PATH = [
+  path.join(chromRoot, 'lib'),
+  chromRoot,
+  process.env.LD_LIBRARY_PATH
+].filter(Boolean).join(':');
+// (optional) help fontconfig f
 // ───────────────── helpers ─────────────────
 async function sessionFromCookies() {
   const jar = await cookies();
