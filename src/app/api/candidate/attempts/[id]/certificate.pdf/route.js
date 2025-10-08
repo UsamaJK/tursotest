@@ -19,12 +19,9 @@ import chromium from '@sparticuz/chromium';
 import puppeteerCore from 'puppeteer-core';
 
 
-const chromRoot = path.join(process.cwd(), 'node_modules', '@sparticuz', 'chromium');
-process.env.LD_LIBRARY_PATH = [
-  path.join(chromRoot, 'lib'),
-  chromRoot,
-  process.env.LD_LIBRARY_PATH
-].filter(Boolean).join(':');
+if (process.env.VERCEL) {
+    process.env.FONTCONFIG_PATH = '/tmp';
+  }
 // (optional) help fontconfig f
 // ───────────────── helpers ─────────────────
 async function sessionFromCookies() {
