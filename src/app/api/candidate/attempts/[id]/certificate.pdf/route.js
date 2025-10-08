@@ -211,7 +211,11 @@ export async function GET(_req, context) {
   // Improve font rendering / emoji support if needed:
   // await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-GB' });
 
-  await page.setContent(html, { waitUntil: 'load' });
+  await page.setContent(html, { 
+    waitUntil: ['load', 'networkidle0'] 
+  });
+  await page.evaluateHandle('document.fonts.ready');
+
 
   const pdf = await page.pdf({
     format: 'A4',
