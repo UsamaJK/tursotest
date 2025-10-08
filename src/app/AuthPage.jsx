@@ -67,7 +67,7 @@ export default function AuthPage() {
           {tab === "login" ? (
             <>
               <h1 className="text-2xl font-semibold text-slate-900">Welcome back</h1>
-              <p className="text-slate-600 mt-10">Enter your credentials to access your account</p>
+              <p className="text-slate-600 mt-2">Enter your credentials to access your account</p>
             </>
           ) : (
             <>
