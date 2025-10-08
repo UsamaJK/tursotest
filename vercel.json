@@ -1,13 +1,8 @@
 {
     "functions": {
         "src/app/api/candidate/attempts/[id]/certificate.pdf/route.js": {
-            "memory": 1024,
-            "maxDuration": 30
-        }
-    },
-    "build": {
-        "env": {
-            "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+            "memory": 3008,
+            "maxDuration": 60
         }
     }
 }

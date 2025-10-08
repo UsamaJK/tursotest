@@ -23,14 +23,15 @@ export default function Certificate({ platform, logoUrl, user, level, ladder, de
       <head>
         <meta charSet="utf-8" />
         <style>{`
-          /* --- Font (professional look) --- */
-          @font-face {
-            font-family: 'Inter';
-            src: url('/cert/fonts/Inter-VariableFont.ttf') format('truetype');
-            font-weight: 100 900;
-            font-style: normal;
-            font-display: swap;
-          }
+           * { box-sizing: border-box; }
+           body { 
+             margin: 0; 
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             color: ${ink}; 
+             -webkit-font-smoothing: antialiased;
+             -webkit-print-color-adjust: exact !important;
+             print-color-adjust: exact !important;
+           }
 
           @page { size: A4; margin: 0; }
           * { box-sizing: border-box; }
